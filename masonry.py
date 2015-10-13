@@ -40,7 +40,7 @@ def construct_cnn_layer(name, layer_spec, conv_module, ndim, batch_normalize):
                     % " ".join(layer_spec.keys()))
     return layer
 
-def construct_cnn(name, layer_specs, n_channels, input_shape, batch_normalize):
+def construct_cnn(name, layer_specs, n_channels, input_shape, batch_normalize, **kwargs):
     ndim = len(input_shape)
     conv_module = {
         2: conv2d,

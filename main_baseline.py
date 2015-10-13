@@ -28,28 +28,16 @@ import crop
 import util
 from patchmonitor import PatchMonitoring, VideoPatchMonitoring
 
-import mnist
-import cluttered_mnist_video
-import kth
-import svhn
-import goodfellow_svhn
+import dump
+import tasks
+import masonry
 
-from dump import Dump, DumpMinimum, PrintingTo, load_model_parameters
 
 floatX = theano.config.floatX
 
-def get_task(task_name, hyperparameters, **kwargs):
-    klass = dict(mnist=mnist.Task,
-                 cluttered_mnist_video=cluttered_mnist_video.Task,
-                 kth=kth.Task,
-                 svhn_digit=svhn.DigitTask,
-                 svhn_number=goodfellow_svhn.NumberTask)[task_name]
-    return klass(**hyperparameters)
 
 def construct_model(hyperparameters, **kwargs):
-    return conv3d.Conv3D(
-        hyperparameters=hyperparameters,
-        name="conv3d")
+    return masonry.construct_cnn(**hyperparameters)
 
 def construct_monitors(algorithm, task_patches, x, x_shape,
                        graph, name, ram, model, cost,
@@ -89,13 +77,13 @@ def construct_monitors(algorithm, task_patches, x, x_shape,
                       for which in "train valid test".split())
     return extensions
 
-def construct_main_loop(name, task_name, patch_shape, batch_size,
-                        n_spatial_dims, n_epochs,
+def construct_main_loop(name, task_name, input_shape,
+                        batch_size, n_epochs,
                         learning_rate, hyperparameters, **kwargs):
     name = "%s_%s" % (name, task_name)
     hyperparameters["name"] = name
 
-    task = get_task(**hyperparameters)
+    task = tasks.get_task(**hyperparameters)
     hyperparameters["n_channels"] = task.n_channels
 
     theano.config.compute_test_value = "warn"
@@ -128,8 +116,8 @@ def construct_main_loop(name, task_name, patch_shape, batch_size,
                          algorithm=algorithm,
                          extensions=(monitors +
                                      [FinishAfter(after_n_epochs=n_epochs),
-                                      DumpMinimum(name+'_best', channel_name='valid_error_rate'),
-                                      Dump(name+'_dump', every_n_epochs=10),
+                                      dump.DumpBest(name+'_best', channel_name='valid_error_rate'),
+                                      dump.LightCheckpoint(name+"_checkpoint.zip", on_interrupt=False),
                                       #Checkpoint(name+'_checkpoint.pkl', every_n_epochs=10, on_interrupt=False),
                                       ProgressBar(),
                                       Timing(),
