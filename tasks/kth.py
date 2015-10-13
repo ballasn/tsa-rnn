@@ -20,6 +20,24 @@ def augment((videos, targets)):
               for video, offset in zip(videos, offsets)]
     return videos, targets
 
+
+class AugmentCrop:
+    def __init__(self, crop_lenght):
+        self.crop_lenght = crop_lenght
+
+    def apply(self, (videos, targets)):
+        mintime = self.crop_lenght
+        crop_shape = np.array([mintime, 100, 140])
+        offsets = [[rng.randint(0, dim + 1) for dim in video.shape - crop_shape]
+                   for video in videos]
+        videos = [(video
+                   [tuple(slice(i, i + k)
+                          for i, k in zip(offset, crop_shape))]
+                   # flip horizontal dimension half the time
+                   [:, :, ::np.random.choice([-1, 1])])
+                  for video, offset in zip(videos, offsets)]
+        return videos, targets
+
 class Task(tasks.Classification):
     name = "kth"
 
@@ -35,12 +53,19 @@ class Task(tasks.Classification):
                 which_set=which_set))
             for which_set in "train valid test".split())
 
-    def apply_default_transformers(self, stream):
+    def apply_default_transformers(self, stream, crop_lenght):
         # FIXME: don't augment on valid/test
-        stream = fuel.transformers.Mapping(
-            stream, mapping=augment)
-        stream = transformers.PaddingShape(
-            stream, shape_sources=["videos"])
+        if crop_lenght is not 'min':
+            augment_crop = AugmentCrop(crop_lenght)
+            stream = fuel.transformers.Mapping(
+                stream, mapping=augment_crop.apply)
+            stream = transformers.PaddingShape(
+                stream, shape_sources=["videos"])
+        else:
+            stream = fuel.transformers.Mapping(
+                stream, mapping=augment)
+            stream = transformers.PaddingShape(
+                stream, shape_sources=["videos"])
         return stream
 
     def get_stream_num_examples(self, which_set, monitor):

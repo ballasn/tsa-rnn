@@ -72,7 +72,8 @@ def construct_monitors(algorithm, task_patches, x, x_shape,
     extensions.append(DataStreamMonitoring(data_independent_channels.get_channels(),
                                            data_stream=None, after_epoch=True))
     extensions.extend(DataStreamMonitoring((channels.get_channels() + [cost]),
-                                           data_stream=task.get_stream(which, monitor=True),
+                                           data_stream=task.get_stream(which, monitor=True,
+                                                                       crop_lenght=input_shape[0]),
                                            prefix=which, after_epoch=True)
                       for which in "train valid test".split())
     return extensions
@@ -93,8 +94,10 @@ def construct_main_loop(name, task_name, input_shape,
     model = construct_model(task=task, **hyperparameters)
     model.initialize()
     feat = model.apply(x)
+    dim = np.prod(model.get_dim('output'))
+
     emitter = task.get_emitter(
-        input_dim=ram.get_dim("states"),
+        input_dim=dim,
         **hyperparameters)
     emitter.initialize()
     cost = emitter.cost(feat, y, 1)
@@ -112,7 +115,7 @@ def construct_main_loop(name, task_name, input_shape,
         x=x, x_shape=x_shape, y=y, cost=cost,
         algorithm=algorithm, task=task, model=uselessflunky, ram=model,
         graph=graph, **hyperparameters)
-    main_loop = MainLoop(data_stream=task.get_stream("train"),
+    main_loop = MainLoop(data_stream=task.get_stream("train", crop_lenght=input_shape[0]),
                          algorithm=algorithm,
                          extensions=(monitors +
                                      [FinishAfter(after_n_epochs=n_epochs),
