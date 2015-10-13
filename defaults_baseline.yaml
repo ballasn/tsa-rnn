@@ -1,0 +1,18 @@
+name: "conv3d"
+task_name: "cluttered_mnist_video"
+shrink_dataset_by: 1
+n_epochs: 100
+batch_size: 128
+cnn_spec:
+    - type: conv
+      border_mode: full
+      size: [4, 4]
+      num_filters: 32
+    - type: conv
+      border_mode: full
+      size: [4, 4]
+      num_filters: 32
+    - type: pool
+      size: [2, 2]
+      step: [2, 2]
+batch_normalize: True
